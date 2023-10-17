@@ -1,20 +1,48 @@
-name: Testing
+name: Combined Workflow
 
 on:
-  workflow_run:
-    workflows: ["Run Bandit"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [Run Bandit]
 
 jobs:
-  test:
+  pylint:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Run tests
-        run: pytest
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      # Add more steps for additional testing if needed
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint
+
+      - name: Analysing the code with pylint
+        run: |
+          pylint $(git ls-files '*.py')
+
+  testing:
+    runs-on: ubuntu-latest
+    needs: pylint  # Make sure the pylint job completes before starting this one
+    steps:
+      - name: Run Selenium Tests
+        run: |
+          # Run your Selenium tests
+          # If tests pass, trigger the workflow in repo3
+          # Example: Trigger the workflow in repo3 using GitHub API
+          # Replace <token> and <repo3> with your own values
+          curl -X POST \
+            -H "Authorization: token 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" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/pruthvi235/Production_chatbot/actions/workflows/6516173085/dispatches \
+            -d '{"ref":"main"}'
